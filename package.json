@@ -1,0 +1,23 @@
+{
+  "private": true,
+  "name": "music-from-another-room",
+  "description": "Makes any music sound like it's playing from another room.",
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "extension dev",
+    "start": "extension start",
+    "build": "extension build",
+    "preview": "extension preview",
+    "build:chrome": "extension build --browser chrome",
+    "build:firefox": "extension build --browser firefox",
+    "build:edge": "extension build --browser edge"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.1.38",
+    "extension": "^3.10.2",
+    "typescript": "^6.0.2"
+  },
+  "packageManager": "npm@10.2.4"
+}

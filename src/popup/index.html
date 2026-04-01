@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Music From Another Room</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="header">
+    <span class="icon">🚪</span>
+    <div>
+      <div class="title">Music From Another Room</div>
+      <div class="subtitle">Low-pass audio filter</div>
+    </div>
+  </div>
+
+  <div class="toggle-row">
+    <div>
+      <div class="toggle-label">Effect</div>
+      <div class="toggle-sublabel" id="toggle-sub">Off</div>
+    </div>
+    <label class="switch">
+      <input type="checkbox" id="toggle" />
+      <span class="slider"></span>
+    </label>
+  </div>
+
+  <div class="section">
+    <div class="section-header">
+      <span class="section-title">Wall Thickness</span>
+      <span class="section-value" id="freq-value">400 Hz</span>
+    </div>
+    <input type="range" id="cutoff" min="100" max="1200" value="400" step="10" />
+    <div class="range-labels">
+      <span class="range-label">Thick wall</span>
+      <span class="range-label">Thin wall</span>
+    </div>
+  </div>
+
+  <div class="status" id="status">Waiting for media…</div>
+
+  <script src="./scripts.ts" type="module"></script>
+</body>
+</html>

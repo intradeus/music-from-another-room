@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json.schemastore.org/chrome-manifest.json",
+  "manifest_version": 3,
+  "name": "Music From Another Room",
+  "version": "1.0.0",
+  "description": "Makes any music sound like it's playing from another room.",
+  "permissions": ["activeTab", "storage", "scripting", "tabCapture", "offscreen"],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://open.spotify.com/*",
+    "*://soundcloud.com/*"
+  ],
+  "background": {
+    "service_worker": "background.ts"
+  },
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_title": "Music From Another Room"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://open.spotify.com/*",
+        "*://soundcloud.com/*"
+      ],
+      "js": ["content/scripts.ts"],
+      "run_at": "document_idle",
+      "all_frames": true
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://open.spotify.com/*",
+        "*://soundcloud.com/*"
+      ],
+      "js": ["content-main/scripts.ts"],
+      "run_at": "document_idle",
+      "world": "MAIN",
+      "all_frames": true
+    }
+  ],
+  "icons": {
+    "16": "images/icon.png",
+    "48": "images/icon.png",
+    "128": "images/icon.png"
+  }
+}

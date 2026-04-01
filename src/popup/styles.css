@@ -1,0 +1,145 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  width: 280px;
+  background: #0f0f13;
+  color: #e8e4dc;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.icon { font-size: 22px; }
+
+.title {
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: #f0ece2;
+}
+
+.subtitle {
+  font-size: 10px;
+  color: #6b6560;
+  margin-top: 1px;
+}
+
+/* Toggle */
+.toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #1a1a22;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  border: 1px solid #2a2a35;
+}
+
+.toggle-label { font-size: 13px; font-weight: 500; }
+.toggle-sublabel { font-size: 10px; color: #6b6560; margin-top: 2px; }
+
+.switch {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.switch input { display: none; }
+
+.slider {
+  position: absolute;
+  inset: 0;
+  background: #2e2e3a;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.slider::before {
+  content: '';
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+input:checked + .slider { background: #7c6af7; }
+input:checked + .slider::before { transform: translateX(20px); }
+
+/* Slider section */
+.section {
+  background: #1a1a22;
+  border-radius: 10px;
+  padding: 14px 16px;
+  border: 1px solid #2a2a35;
+  margin-bottom: 12px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #7c6af7;
+}
+
+.section-value {
+  font-size: 11px;
+  color: #a09890;
+  font-variant-numeric: tabular-nums;
+}
+
+input[type=range] {
+  width: 100%;
+  -webkit-appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  background: #2e2e3a;
+  outline: none;
+}
+
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #7c6af7;
+  cursor: pointer;
+}
+
+.range-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 6px;
+}
+
+.range-label { font-size: 9px; color: #4a4550; }
+
+/* Status pill */
+.status {
+  text-align: center;
+  font-size: 10px;
+  color: #4a4550;
+  margin-top: 4px;
+}
+
+.status.active { color: #7c6af7; }
