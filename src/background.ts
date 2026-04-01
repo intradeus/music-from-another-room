@@ -14,9 +14,9 @@ chrome.runtime.onMessage.addListener(
       console.log(TAG, 'Tab', tabId, 'needs tab capture (Web Audio hook failed)');
       needsCapture.add(tabId);
 
-      chrome.storage.local.get(['enabled', 'cutoff'], (data) => {
+      chrome.storage.local.get(['enabled', 'cutoff', 'grainEnabled'], (data) => {
         if (data.enabled && !activeCaptures.has(tabId)) {
-          startCapture(tabId, (data.cutoff as number) ?? 400);
+          startCapture(tabId, (data.cutoff as number) ?? 400, !!data.grainEnabled);
         }
       });
     }
@@ -24,7 +24,7 @@ chrome.runtime.onMessage.addListener(
     if (msg.type === 'BG_SET_STATE') {
       if (!needsCapture.has(msg.tabId)) return;
       if (msg.enabled && !activeCaptures.has(msg.tabId)) {
-        startCapture(msg.tabId, msg.cutoff ?? 400);
+        startCapture(msg.tabId, msg.cutoff ?? 400, msg.grainEnabled);
       } else if (!msg.enabled && activeCaptures.has(msg.tabId)) {
         stopCapture(msg.tabId);
       }
@@ -34,10 +34,15 @@ chrome.runtime.onMessage.addListener(
       if (!activeCaptures.has(msg.tabId)) return;
       forward({ type: 'MFAR_UPDATE_FILTER', tabId: msg.tabId, cutoff: msg.cutoff });
     }
+
+    if (msg.type === 'BG_SET_GRAIN') {
+      if (!activeCaptures.has(msg.tabId)) return;
+      forward({ type: 'MFAR_UPDATE_GRAIN', tabId: msg.tabId, enabled: msg.enabled });
+    }
   }
 );
 
-async function startCapture(tabId: number, cutoff: number): Promise<void> {
+async function startCapture(tabId: number, cutoff: number, grainEnabled: boolean): Promise<void> {
   try {
     await chrome.tabs.update(tabId, { muted: true });
 
@@ -52,6 +57,7 @@ async function startCapture(tabId: number, cutoff: number): Promise<void> {
       tabId,
       cutoff,
       enabled: true,
+      grainEnabled,
     });
 
     activeCaptures.add(tabId);

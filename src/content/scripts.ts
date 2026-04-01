@@ -32,12 +32,4 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
   }
 });
 
-// Sites that use Web Audio API directly (no <audio>/<video> elements) —
-// go straight to tab capture.
-const TAB_CAPTURE_ONLY = ['soundcloud.com'];
-if (TAB_CAPTURE_ONLY.some((h) => location.hostname.includes(h))) {
-  console.log(TAG, 'Site requires tab capture — skipping direct hook');
-  safeSend({ type: 'HOOK_FAILED' });
-}
-
 console.log(TAG, 'Loaded — relay ready');

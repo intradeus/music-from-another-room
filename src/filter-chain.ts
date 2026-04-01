@@ -1,4 +1,46 @@
 export const FILTER_Q = 0.8;
+export const GRAIN_BANDPASS_FREQ = 3500;
+export const GRAIN_BANDPASS_Q = 0.8;
+export const GRAIN_GAIN = 0.03;
+export const GRAIN_BUFFER_SECS = 2;
+
+export interface GrainChain {
+  source: AudioBufferSourceNode;
+  filterNode: BiquadFilterNode;
+  gainNode: GainNode;
+}
+
+export function buildGrainChain(ctx: AudioContext): GrainChain {
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * GRAIN_BUFFER_SECS, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+
+  const source = ctx.createBufferSource();
+  source.buffer = buffer;
+  source.loop = true;
+
+  const filterNode = ctx.createBiquadFilter();
+  filterNode.type = 'bandpass';
+  filterNode.frequency.value = GRAIN_BANDPASS_FREQ;
+  filterNode.Q.value = GRAIN_BANDPASS_Q;
+
+  const gainNode = ctx.createGain();
+  gainNode.gain.value = GRAIN_GAIN;
+
+  source.connect(filterNode);
+  filterNode.connect(gainNode);
+  gainNode.connect(ctx.destination);
+  source.start();
+  return { source, filterNode, gainNode };
+}
+
+export function teardownGrainChain(grain: GrainChain): void {
+  grain.source.stop();
+  grain.source.disconnect();
+  grain.filterNode.disconnect();
+  grain.gainNode.disconnect();
+}
+
 export const GAIN_ENABLED = 0.65;
 export const GAIN_DISABLED = 1.0;
 export const FILTER_BYPASS_HZ = 20000;

@@ -11,7 +11,12 @@ export interface SetCutoffMessage {
   cutoff: number;
 }
 
-export type ContentMessage = SetStateMessage | SetCutoffMessage;
+export interface SetGrainMessage {
+  type: 'SET_GRAIN';
+  enabled: boolean;
+}
+
+export type ContentMessage = SetStateMessage | SetCutoffMessage | SetGrainMessage;
 
 // --- Messages from popup → background (via chrome.runtime.sendMessage) ---
 
@@ -20,6 +25,7 @@ export interface BgSetStateMessage {
   tabId: number;
   enabled: boolean;
   cutoff: number;
+  grainEnabled: boolean;
 }
 
 export interface BgSetCutoffMessage {
@@ -32,7 +38,13 @@ export interface HookFailedMessage {
   type: 'HOOK_FAILED';
 }
 
-export type BackgroundMessage = BgSetStateMessage | BgSetCutoffMessage | HookFailedMessage;
+export interface BgSetGrainMessage {
+  type: 'BG_SET_GRAIN';
+  tabId: number;
+  enabled: boolean;
+}
+
+export type BackgroundMessage = BgSetStateMessage | BgSetCutoffMessage | BgSetGrainMessage | HookFailedMessage;
 
 // --- Messages from background → offscreen (via chrome.runtime.sendMessage) ---
 
@@ -42,6 +54,7 @@ export interface StartCaptureMessage {
   tabId: number;
   cutoff: number;
   enabled: boolean;
+  grainEnabled: boolean;
 }
 
 export interface UpdateFilterMessage {
@@ -55,7 +68,13 @@ export interface StopCaptureMessage {
   tabId: number;
 }
 
-export type OffscreenMessage = StartCaptureMessage | UpdateFilterMessage | StopCaptureMessage;
+export interface UpdateGrainMessage {
+  type: 'MFAR_UPDATE_GRAIN';
+  tabId: number;
+  enabled: boolean;
+}
+
+export type OffscreenMessage = StartCaptureMessage | UpdateFilterMessage | UpdateGrainMessage | StopCaptureMessage;
 
 // --- PostMessage between MAIN ↔ ISOLATED content script worlds ---
 
