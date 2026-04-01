@@ -13,6 +13,11 @@ function safeSend(msg: { type: string }): void {
 
 // Relay popup → MAIN world
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg.type === 'GET_MEDIA_INFO') {
+    sendResponse({ title: document.title || null });
+    return;
+  }
+
   console.log(TAG, 'Relaying to MAIN world:', msg.type);
   const post: MfarPostMessage = { direction: 'mfar-to-main', payload: msg };
   window.postMessage(post, '*');

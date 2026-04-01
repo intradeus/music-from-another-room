@@ -1,10 +1,10 @@
 import type { ContentMessage, MfarPostMessage } from '../types';
 import {
-  FILTER_Q,
-  FILTER_BYPASS_HZ,
-  GAIN_ENABLED,
-  GAIN_DISABLED,
-  buildFilterChain,
+  WALL_Q,
+  WALL_BYPASS_HZ,
+  WALL_GAIN_ON,
+  WALL_GAIN_OFF,
+  buildWallChain,
   setAudioParam,
   buildGrainChain,
   teardownGrainChain,
@@ -18,9 +18,9 @@ let filterNode: BiquadFilterNode | null = null;
 let gainNode: GainNode | null = null;
 let isEnabled = false;
 let cutoffHz = 400;
-let hookDegraded = false;  // true = all tiers exhausted, tab capture is handling it
-let tier1Active = false;   // true = Tier 1 (media element hook) succeeded
-let settingUp = false;     // true = we're building a chain, suppress monkey-patch
+let usingTabCapture = false;       // true = in-page tiers exhausted, background tab capture is handling it
+let mediaElementHookActive = false; // true = Tier 1 (media element hook) succeeded
+let buildingChain = false;          // true = chain is being constructed, suppress monkey-patch intercept
 let grainEnabled = false;
 let grainChain: GrainChain | null = null;
 
@@ -53,19 +53,21 @@ function hookMediaElement(mediaElement: HTMLMediaElement): void {
     const ctx = getOrCreateContext();
     const source = ctx.createMediaElementSource(mediaElement);
 
-    settingUp = true;
+    buildingChain = true;
     try {
-      ({ filterNode, gainNode } = buildFilterChain(ctx, source, isEnabled, cutoffHz));
+      const { wallFilterNode, wallGainNode } = buildWallChain(ctx, source, isEnabled, cutoffHz);
+      filterNode = wallFilterNode;
+      gainNode = wallGainNode;
       applyGrain();
     } finally {
-      settingUp = false;
+      buildingChain = false;
     }
-    tier1Active = true;
+    mediaElementHookActive = true;
 
-    console.log(TAG, 'Tier 1: Hooked. Filter:', filterNode.frequency.value, 'Hz, Gain:', gainNode.gain.value);
+    console.log(TAG, 'Tier 1: Hooked. Filter:', filterNode!.frequency.value, 'Hz, Gain:', gainNode!.gain.value);
     verifySourceAudio(ctx, source, mediaElement);
   } catch (err) {
-    settingUp = false;
+    buildingChain = false;
     console.warn(TAG, 'Tier 1: Could not hook element:', (err as Error).message);
     notifyHookFailed();
   }
@@ -112,8 +114,8 @@ function verifySourceAudio(
       gainNode?.disconnect();
       filterNode = null;
       gainNode = null;
-      tier1Active = false;
-      hookDegraded = true;
+      mediaElementHookActive = false;
+      usingTabCapture = true;
 
       notifyHookFailed();
     }
@@ -129,7 +131,7 @@ function installWebAudioPatch(): void {
     destination: AudioNode | AudioParam,
     ...args: number[]
   ) {
-    if (!tier1Active && !hookDegraded && !settingUp && destination instanceof AudioDestinationNode) {
+    if (!mediaElementHookActive && !usingTabCapture && !buildingChain && destination instanceof AudioDestinationNode) {
       const ctx = (destination as AudioDestinationNode).context as AudioContext;
 
       if (!patchedContexts.has(ctx)) {
@@ -137,11 +139,11 @@ function installWebAudioPatch(): void {
 
         const fNode = ctx.createBiquadFilter();
         fNode.type = 'lowpass';
-        fNode.frequency.value = isEnabled ? cutoffHz : FILTER_BYPASS_HZ;
-        fNode.Q.value = FILTER_Q;
+        fNode.frequency.value = isEnabled ? cutoffHz : WALL_BYPASS_HZ;
+        fNode.Q.value = WALL_Q;
 
         const gNode = ctx.createGain();
-        gNode.gain.value = isEnabled ? GAIN_ENABLED : GAIN_DISABLED;
+        gNode.gain.value = isEnabled ? WALL_GAIN_ON : WALL_GAIN_OFF;
 
         fNode.connect(gNode); // gNode is not AudioDestinationNode — safe, no interception
         (origConnect as Function).call(gNode, destination); // bypass patch: gNode → real destination
@@ -200,7 +202,7 @@ function verifyTier2Audio(ctx: AudioContext, node: BiquadFilterNode): void {
       filterNode = null;
       gainNode = null;
       audioContext = null;
-      hookDegraded = true;
+      usingTabCapture = true;
       notifyHookFailed();
     }
   }, 100);
@@ -219,11 +221,11 @@ function notifyHookFailed(): void {
 function applyGrain(): void {
   if (!audioContext) return;
   if (grainEnabled && !grainChain) {
-    settingUp = true;
+    buildingChain = true;
     try {
       grainChain = buildGrainChain(audioContext);
     } finally {
-      settingUp = false;
+      buildingChain = false;
     }
   } else if (!grainEnabled && grainChain) {
     teardownGrainChain(grainChain);
@@ -232,7 +234,7 @@ function applyGrain(): void {
 }
 
 function scanForMediaElements(): void {
-  if (hookDegraded) return;
+  if (usingTabCapture) return;
   const elements = document.querySelectorAll<HTMLMediaElement>('video, audio');
   console.log(TAG, 'Scan found', elements.length, 'media element(s)');
   elements.forEach(hookMediaElement);
@@ -265,8 +267,8 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
 
     if (filterNode && gainNode && audioContext) {
       const now = audioContext.currentTime;
-      setAudioParam(filterNode.frequency, isEnabled ? cutoffHz : FILTER_BYPASS_HZ, now);
-      setAudioParam(gainNode.gain, isEnabled ? GAIN_ENABLED : GAIN_DISABLED, now);
+      setAudioParam(filterNode.frequency, isEnabled ? cutoffHz : WALL_BYPASS_HZ, now);
+      setAudioParam(gainNode.gain, isEnabled ? WALL_GAIN_ON : WALL_GAIN_OFF, now);
     }
 
     scanForMediaElements();

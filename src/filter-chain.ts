@@ -1,4 +1,13 @@
-export const FILTER_Q = 0.8;
+// ─── Wall filter constants ────────────────────────────────────────────────────
+
+export const WALL_Q = 0.8;
+export const WALL_BYPASS_HZ = 20000;
+export const WALL_GAIN_ON = 0.65;
+export const WALL_GAIN_OFF = 1.0;
+export const WALL_TIME_CONSTANT = 0.05;
+
+// ─── Grain constants + chain ──────────────────────────────────────────────────
+
 export const GRAIN_BANDPASS_FREQ = 3500;
 export const GRAIN_BANDPASS_Q = 0.8;
 export const GRAIN_GAIN = 0.03;
@@ -41,33 +50,30 @@ export function teardownGrainChain(grain: GrainChain): void {
   grain.gainNode.disconnect();
 }
 
-export const GAIN_ENABLED = 0.65;
-export const GAIN_DISABLED = 1.0;
-export const FILTER_BYPASS_HZ = 20000;
-export const FILTER_TIME_CONSTANT = 0.05;
+// ─── Wall chain ───────────────────────────────────────────────────────────────
 
-export function buildFilterChain(
+export function buildWallChain(
   ctx: AudioContext,
   source: AudioNode,
-  enabled: boolean,
-  cutoff: number
-): { filterNode: BiquadFilterNode; gainNode: GainNode } {
-  const filterNode = ctx.createBiquadFilter();
-  filterNode.type = 'lowpass';
-  filterNode.frequency.value = enabled ? cutoff : FILTER_BYPASS_HZ;
-  filterNode.Q.value = FILTER_Q;
+  wallEnabled: boolean,
+  wallCutoff: number
+): { wallFilterNode: BiquadFilterNode; wallGainNode: GainNode } {
+  const wallFilterNode = ctx.createBiquadFilter();
+  wallFilterNode.type = 'lowpass';
+  wallFilterNode.frequency.value = wallEnabled ? wallCutoff : WALL_BYPASS_HZ;
+  wallFilterNode.Q.value = WALL_Q;
 
-  const gainNode = ctx.createGain();
-  gainNode.gain.value = enabled ? GAIN_ENABLED : GAIN_DISABLED;
+  const wallGainNode = ctx.createGain();
+  wallGainNode.gain.value = wallEnabled ? WALL_GAIN_ON : WALL_GAIN_OFF;
 
-  source.connect(filterNode);
-  filterNode.connect(gainNode);
-  gainNode.connect(ctx.destination);
+  source.connect(wallFilterNode);
+  wallFilterNode.connect(wallGainNode);
+  wallGainNode.connect(ctx.destination);
 
-  return { filterNode, gainNode };
+  return { wallFilterNode, wallGainNode };
 }
 
 export function setAudioParam(param: AudioParam, value: number, currentTime: number): void {
   param.cancelScheduledValues(currentTime);
-  param.setTargetAtTime(value, currentTime, FILTER_TIME_CONSTANT);
+  param.setTargetAtTime(value, currentTime, WALL_TIME_CONSTANT);
 }

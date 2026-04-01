@@ -65,6 +65,8 @@ async function startCapture(tabId: number, cutoff: number, grainEnabled: boolean
   } catch (err) {
     console.error(TAG, 'startCapture failed:', err);
     chrome.tabs.update(tabId, { muted: false }).catch(() => {});
+    chrome.storage.local.set({ captureUnavailableTabId: tabId });
+    chrome.runtime.sendMessage({ type: 'ALL_TIERS_FAILED' }).catch(() => {});
   }
 }
 
@@ -104,6 +106,11 @@ chrome.tabs.onRemoved.addListener((tabId) => {
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url) {
     needsCapture.delete(tabId);
+    chrome.storage.local.get('captureUnavailableTabId', (data) => {
+      if (data.captureUnavailableTabId === tabId) {
+        chrome.storage.local.remove('captureUnavailableTabId');
+      }
+    });
     if (activeCaptures.has(tabId)) {
       stopCapture(tabId);
     }

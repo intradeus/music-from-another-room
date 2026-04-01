@@ -8,7 +8,8 @@
   "host_permissions": [
     "*://*.youtube.com/*",
     "*://open.spotify.com/*",
-    "*://soundcloud.com/*"
+    "*://soundcloud.com/*",
+    "*://www.deezer.com/*"
   ],
   "background": {
     "service_worker": "background.ts"
@@ -22,7 +23,8 @@
       "matches": [
         "*://*.youtube.com/*",
         "*://open.spotify.com/*",
-        "*://soundcloud.com/*"
+        "*://soundcloud.com/*",
+        "*://www.deezer.com/*"
       ],
       "js": ["content/scripts.ts"],
       "run_at": "document_idle",
@@ -32,10 +34,11 @@
       "matches": [
         "*://*.youtube.com/*",
         "*://open.spotify.com/*",
-        "*://soundcloud.com/*"
+        "*://soundcloud.com/*",
+        "*://www.deezer.com/*"
       ],
       "js": ["content-main/scripts.ts"],
-      "run_at": "document_idle",
+      "run_at": "document_start",
       "world": "MAIN",
       "all_frames": true
     }

@@ -1,5 +1,5 @@
 import type { OffscreenMessage, StartCaptureMessage, UpdateFilterMessage, UpdateGrainMessage, StopCaptureMessage } from '../types';
-import { buildFilterChain, setAudioParam, buildGrainChain, teardownGrainChain, type GrainChain } from '../filter-chain';
+import { buildWallChain, setAudioParam, buildGrainChain, teardownGrainChain, type GrainChain } from '../filter-chain';
 
 const TAG = '[MFAR:offscreen]';
 
@@ -35,7 +35,7 @@ async function handleStart({ streamId, tabId, cutoff, enabled, grainEnabled }: S
 
     const ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(stream);
-    const { filterNode, gainNode } = buildFilterChain(ctx, source, enabled, cutoff);
+    const { wallFilterNode: filterNode, wallGainNode: gainNode } = buildWallChain(ctx, source, enabled, cutoff);
     const grainChain = grainEnabled ? buildGrainChain(ctx) : null;
 
     captures.set(tabId, { stream, ctx, filterNode, gainNode, grainChain });

@@ -76,6 +76,14 @@ export interface UpdateGrainMessage {
 
 export type OffscreenMessage = StartCaptureMessage | UpdateFilterMessage | UpdateGrainMessage | StopCaptureMessage;
 
+// --- Messages from background → popup (via chrome.runtime.sendMessage) ---
+
+export interface AllTiersFailedMessage {
+  type: 'ALL_TIERS_FAILED';
+}
+
+export type PopupMessage = AllTiersFailedMessage;
+
 // --- PostMessage between MAIN ↔ ISOLATED content script worlds ---
 
 export interface MfarPostMessage {
