@@ -1,18 +1,25 @@
-/** @typedef {{ stream: MediaStream, ctx: AudioContext, filterNode: BiquadFilterNode, gainNode: GainNode }} CaptureState */
+import type { OffscreenMessage, StartCaptureMessage, UpdateFilterMessage, StopCaptureMessage } from '../types';
+import { buildFilterChain, setAudioParam } from '../filter-chain';
 
 const TAG = '[MFAR:offscreen]';
 
-/** @type {Map<number, CaptureState>} */
-const captures = new Map();
+interface CaptureState {
+  stream: MediaStream;
+  ctx: AudioContext;
+  filterNode: BiquadFilterNode;
+  gainNode: GainNode;
+}
 
-chrome.runtime.onMessage.addListener((msg) => {
+const captures = new Map<number, CaptureState>();
+
+chrome.runtime.onMessage.addListener((msg: OffscreenMessage) => {
   if (msg.type === 'MFAR_START_CAPTURE') handleStart(msg);
   if (msg.type === 'MFAR_UPDATE_FILTER') handleUpdate(msg);
   if (msg.type === 'MFAR_STOP_CAPTURE') handleStop(msg);
 });
 
-async function handleStart({ streamId, tabId, cutoff, enabled }) {
-  handleStop({ tabId });
+async function handleStart({ streamId, tabId, cutoff, enabled }: StartCaptureMessage): Promise<void> {
+  handleStop({ type: 'MFAR_STOP_CAPTURE', tabId });
 
   try {
     const stream = await navigator.mediaDevices.getUserMedia({
@@ -21,23 +28,12 @@ async function handleStart({ streamId, tabId, cutoff, enabled }) {
           chromeMediaSource: 'tab',
           chromeMediaSourceId: streamId,
         },
-      },
+      } as MediaTrackConstraints,
     });
 
     const ctx = new AudioContext();
     const source = ctx.createMediaStreamSource(stream);
-
-    const filterNode = ctx.createBiquadFilter();
-    filterNode.type = 'lowpass';
-    filterNode.frequency.value = enabled ? cutoff : 20000;
-    filterNode.Q.value = 0.8;
-
-    const gainNode = ctx.createGain();
-    gainNode.gain.value = enabled ? 0.65 : 1.0;
-
-    source.connect(filterNode);
-    filterNode.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    const { filterNode, gainNode } = buildFilterChain(ctx, source, enabled, cutoff);
 
     captures.set(tabId, { stream, ctx, filterNode, gainNode });
     console.log(TAG, 'Capture started for tab', tabId, '— filter:', filterNode.frequency.value, 'Hz');
@@ -46,17 +42,15 @@ async function handleStart({ streamId, tabId, cutoff, enabled }) {
   }
 }
 
-function handleUpdate({ tabId, cutoff }) {
+function handleUpdate({ tabId, cutoff }: UpdateFilterMessage): void {
   const cap = captures.get(tabId);
   if (!cap) return;
 
-  const now = cap.ctx.currentTime;
-  cap.filterNode.frequency.cancelScheduledValues(now);
-  cap.filterNode.frequency.setTargetAtTime(cutoff, now, 0.05);
+  setAudioParam(cap.filterNode.frequency, cutoff, cap.ctx.currentTime);
   console.log(TAG, 'Filter updated for tab', tabId, '— cutoff:', cutoff);
 }
 
-function handleStop({ tabId }) {
+function handleStop({ tabId }: StopCaptureMessage): void {
   const cap = captures.get(tabId);
   if (!cap) return;
 

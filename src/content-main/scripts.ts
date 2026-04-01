@@ -1,4 +1,11 @@
 import type { ContentMessage, MfarPostMessage } from '../types';
+import {
+  FILTER_BYPASS_HZ,
+  GAIN_ENABLED,
+  GAIN_DISABLED,
+  buildFilterChain,
+  setAudioParam,
+} from '../filter-chain';
 
 const TAG = '[MFAR:main]';
 
@@ -33,17 +40,7 @@ function hookMediaElement(mediaElement: HTMLMediaElement): void {
     const ctx = getOrCreateContext();
     const source = ctx.createMediaElementSource(mediaElement);
 
-    filterNode = ctx.createBiquadFilter();
-    filterNode.type = 'lowpass';
-    filterNode.frequency.value = isEnabled ? cutoffHz : 20000;
-    filterNode.Q.value = 0.8;
-
-    gainNode = ctx.createGain();
-    gainNode.gain.value = isEnabled ? 0.65 : 1.0;
-
-    source.connect(filterNode);
-    filterNode.connect(gainNode);
-    gainNode.connect(ctx.destination);
+    ({ filterNode, gainNode } = buildFilterChain(ctx, source, isEnabled, cutoffHz));
 
     console.log(TAG, 'Hooked successfully. Filter:', filterNode.frequency.value, 'Hz, Gain:', gainNode.gain.value);
 
@@ -134,16 +131,10 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
     isEnabled = msg.enabled;
     cutoffHz = msg.cutoff ?? cutoffHz;
 
-    if (filterNode && audioContext) {
+    if (filterNode && gainNode && audioContext) {
       const now = audioContext.currentTime;
-      filterNode.frequency.cancelScheduledValues(now);
-      filterNode.frequency.setTargetAtTime(isEnabled ? cutoffHz : 20000, now, 0.05);
-    }
-
-    if (gainNode && audioContext) {
-      const now = audioContext.currentTime;
-      gainNode.gain.cancelScheduledValues(now);
-      gainNode.gain.setTargetAtTime(isEnabled ? 0.65 : 1.0, now, 0.05);
+      setAudioParam(filterNode.frequency, isEnabled ? cutoffHz : FILTER_BYPASS_HZ, now);
+      setAudioParam(gainNode.gain, isEnabled ? GAIN_ENABLED : GAIN_DISABLED, now);
     }
 
     scanForMediaElements();
@@ -152,9 +143,7 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
   if (msg.type === 'SET_CUTOFF') {
     cutoffHz = msg.cutoff;
     if (filterNode && isEnabled && audioContext) {
-      const now = audioContext.currentTime;
-      filterNode.frequency.cancelScheduledValues(now);
-      filterNode.frequency.setTargetAtTime(cutoffHz, now, 0.05);
+      setAudioParam(filterNode.frequency, cutoffHz, audioContext.currentTime);
     }
   }
 });
