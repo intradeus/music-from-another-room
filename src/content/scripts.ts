@@ -14,7 +14,13 @@ function safeSend(msg: { type: string }): void {
 // Relay popup → MAIN world
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === 'GET_MEDIA_INFO') {
-    sendResponse({ title: document.title || null });
+    const meta = navigator.mediaSession?.metadata;
+    sendResponse({
+      title: meta?.title ?? null,
+      artist: meta?.artist ?? null,
+      album: meta?.album ?? null,
+      pageTitle: document.title || null,
+    });
     return;
   }
 

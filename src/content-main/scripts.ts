@@ -240,10 +240,47 @@ function scanForMediaElements(): void {
   elements.forEach(hookMediaElement);
 }
 
+// ─── Tier 1.5: HTMLMediaElement.prototype.play hook ──────────────────────────
+// Catches elements created via `new Audio()` that are never appended to the DOM
+// and therefore invisible to querySelectorAll / MutationObserver.
+
+function installPlayHook(): void {
+  const origPlay = HTMLMediaElement.prototype.play;
+  HTMLMediaElement.prototype.play = function (this: HTMLMediaElement) {
+    if (!usingTabCapture) hookMediaElement(this);
+    return origPlay.call(this);
+  };
+}
+
+// ─── Tier 3 escalation timer ──────────────────────────────────────────────────
+// If the effect is enabled but no in-page chain is established within 3 s,
+// escalate to tab capture (handles sites that bypass both Tier 1 and Tier 2).
+
+let escalationTimer: ReturnType<typeof setTimeout> | null = null;
+
+function scheduleEscalation(): void {
+  if (escalationTimer) clearTimeout(escalationTimer);
+  escalationTimer = setTimeout(() => {
+    escalationTimer = null;
+    if (!filterNode && !gainNode && !usingTabCapture && isEnabled) {
+      console.warn(TAG, 'No audio chain after 3 s — escalating to Tier 3 (tab capture)');
+      usingTabCapture = true;
+      notifyHookFailed();
+    }
+  }, 3000);
+}
+
+function cancelEscalation(): void {
+  if (escalationTimer) { clearTimeout(escalationTimer); escalationTimer = null; }
+}
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 
 // Tier 2 must be installed before Tier 1 scans (and before any site scripts connect nodes)
 installWebAudioPatch();
+
+// Tier 1.5: intercept new Audio() / detached elements via play()
+installPlayHook();
 
 // Watch for dynamically added media elements (YouTube is a SPA)
 const observer = new MutationObserver(() => scanForMediaElements());
@@ -269,6 +306,12 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
       const now = audioContext.currentTime;
       setAudioParam(filterNode.frequency, isEnabled ? cutoffHz : WALL_BYPASS_HZ, now);
       setAudioParam(gainNode.gain, isEnabled ? WALL_GAIN_ON : WALL_GAIN_OFF, now);
+    }
+
+    if (isEnabled && !filterNode && !gainNode && !usingTabCapture) {
+      scheduleEscalation();
+    } else {
+      cancelEscalation();
     }
 
     scanForMediaElements();
