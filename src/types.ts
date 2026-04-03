@@ -44,7 +44,12 @@ export interface BgSetGrainMessage {
   enabled: boolean;
 }
 
-export type BackgroundMessage = BgSetStateMessage | BgSetCutoffMessage | BgSetGrainMessage | HookFailedMessage;
+export interface MediaCountMessage {
+  type: 'MEDIA_COUNT';
+  count: number;
+}
+
+export type BackgroundMessage = BgSetStateMessage | BgSetCutoffMessage | BgSetGrainMessage | HookFailedMessage | MediaCountMessage;
 
 // --- Messages from background → offscreen (via chrome.runtime.sendMessage) ---
 
@@ -88,5 +93,5 @@ export type PopupMessage = AllTiersFailedMessage;
 
 export interface MfarPostMessage {
   direction: 'mfar-to-main' | 'mfar-to-isolated';
-  payload: ContentMessage | { type: 'HOOK_FAILED' };
+  payload: ContentMessage | { type: 'HOOK_FAILED' } | { type: 'MEDIA_COUNT'; count: number };
 }

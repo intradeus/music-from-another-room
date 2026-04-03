@@ -23,6 +23,7 @@ let mediaElementHookActive = false; // true = Tier 1 (media element hook) succee
 let buildingChain = false;          // true = chain is being constructed, suppress monkey-patch intercept
 let grainEnabled = false;
 let grainChain: GrainChain | null = null;
+let hookedCount = 0;
 
 const processedElements = new WeakSet<HTMLMediaElement>();
 
@@ -63,6 +64,8 @@ function hookMediaElement(mediaElement: HTMLMediaElement): void {
       buildingChain = false;
     }
     mediaElementHookActive = true;
+    hookedCount++;
+    notifyMediaCount();
 
     console.log(TAG, 'Tier 1: Hooked. Filter:', filterNode!.frequency.value, 'Hz, Gain:', gainNode!.gain.value);
     verifySourceAudio(ctx, source, mediaElement);
@@ -112,6 +115,10 @@ function verifySourceAudio(
       source.disconnect();
       filterNode?.disconnect();
       gainNode?.disconnect();
+      // Reconnect source directly so audio keeps playing while tab capture starts up.
+      // createMediaElementSource permanently reroutes the element — without this the
+      // element goes silent and requires a page refresh to recover.
+      (origConnect as Function).call(source, ctx.destination);
       filterNode = null;
       gainNode = null;
       mediaElementHookActive = false;
@@ -211,11 +218,11 @@ function verifyTier2Audio(ctx: AudioContext, node: BiquadFilterNode): void {
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
 function notifyHookFailed(): void {
-  const msg: MfarPostMessage = {
-    direction: 'mfar-to-isolated',
-    payload: { type: 'HOOK_FAILED' },
-  };
-  window.postMessage(msg, '*');
+  window.postMessage({ direction: 'mfar-to-isolated', payload: { type: 'HOOK_FAILED' } } satisfies MfarPostMessage, '*');
+}
+
+function notifyMediaCount(): void {
+  window.postMessage({ direction: 'mfar-to-isolated', payload: { type: 'MEDIA_COUNT', count: hookedCount } } satisfies MfarPostMessage, '*');
 }
 
 function applyGrain(): void {
@@ -265,6 +272,8 @@ function scheduleEscalation(): void {
     if (!filterNode && !gainNode && !usingTabCapture && isEnabled) {
       console.warn(TAG, 'No audio chain after 3 s — escalating to Tier 3 (tab capture)');
       usingTabCapture = true;
+      hookedCount = 1;
+      notifyMediaCount();
       notifyHookFailed();
     }
   }, 3000);

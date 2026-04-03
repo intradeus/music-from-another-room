@@ -2,6 +2,7 @@ import type { BackgroundMessage, OffscreenMessage } from './types';
 
 const TAG = '[MFAR:bg]';
 
+
 const needsCapture = new Set<number>();
 const activeCaptures = new Set<number>();
 
@@ -38,6 +39,18 @@ chrome.runtime.onMessage.addListener(
     if (msg.type === 'BG_SET_GRAIN') {
       if (!activeCaptures.has(msg.tabId)) return;
       forward({ type: 'MFAR_UPDATE_GRAIN', tabId: msg.tabId, enabled: msg.enabled });
+    }
+
+    if (msg.type === 'MEDIA_COUNT') {
+      const tabId = sender.tab?.id;
+      if (tabId == null) return;
+      if (msg.count > 0) {
+        chrome.action.setBadgeBackgroundColor({ color: '#cc3333', tabId });
+        chrome.action.setBadgeTextColor({ color: '#000000', tabId });
+        chrome.action.setBadgeText({ text: 'ok', tabId });
+      } else {
+        chrome.action.setBadgeText({ text: '', tabId });
+      }
     }
   }
 );
@@ -101,10 +114,12 @@ chrome.tabs.onRemoved.addListener((tabId) => {
     activeCaptures.delete(tabId);
     forward({ type: 'MFAR_STOP_CAPTURE', tabId });
   }
+  chrome.action.setBadgeText({ text: '', tabId }).catch(() => {});
 });
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
   if (changeInfo.url) {
+    chrome.action.setBadgeText({ text: '', tabId }).catch(() => {});
     needsCapture.delete(tabId);
     chrome.storage.local.get('captureUnavailableTabId', (data) => {
       if (data.captureUnavailableTabId === tabId) {

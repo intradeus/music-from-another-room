@@ -2,7 +2,7 @@ import type { MfarPostMessage } from '../types';
 
 const TAG = '[MFAR:isolated]';
 
-function safeSend(msg: { type: string }): void {
+function safeSend(msg: { type: string; [key: string]: unknown }): void {
   try {
     if (!chrome.runtime?.id) return;
     chrome.runtime.sendMessage(msg);
@@ -40,6 +40,10 @@ window.addEventListener('message', (event: MessageEvent<MfarPostMessage>) => {
 
   if (msg.type === 'HOOK_FAILED') {
     safeSend({ type: 'HOOK_FAILED' });
+  }
+
+  if (msg.type === 'MEDIA_COUNT') {
+    safeSend({ type: 'MEDIA_COUNT', count: msg.count });
   }
 });
 
